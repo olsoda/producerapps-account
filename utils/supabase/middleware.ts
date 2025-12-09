@@ -10,6 +10,9 @@ export const createClient = (request: NextRequest) => {
     }
   });
 
+  const cookieDomain =
+    process.env.NODE_ENV === 'production' ? '.producerapps.com' : undefined;
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -23,7 +26,8 @@ export const createClient = (request: NextRequest) => {
           request.cookies.set({
             name,
             value,
-            ...options
+            ...options,
+            domain: cookieDomain
           });
           response = NextResponse.next({
             request: {
@@ -33,7 +37,8 @@ export const createClient = (request: NextRequest) => {
           response.cookies.set({
             name,
             value,
-            ...options
+            ...options,
+            domain: cookieDomain
           });
         },
         remove(name: string, options: CookieOptions) {
@@ -41,7 +46,8 @@ export const createClient = (request: NextRequest) => {
           request.cookies.set({
             name,
             value: '',
-            ...options
+            ...options,
+            domain: cookieDomain
           });
           response = NextResponse.next({
             request: {
@@ -51,9 +57,13 @@ export const createClient = (request: NextRequest) => {
           response.cookies.set({
             name,
             value: '',
-            ...options
+            ...options,
+            domain: cookieDomain
           });
         }
+      },
+      cookieOptions: {
+        domain: cookieDomain
       }
     }
   );

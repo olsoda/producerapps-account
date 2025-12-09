@@ -12,7 +12,6 @@ import {
 } from '@/utils/stripe/server'; // Import the Stripe update functions
 import { stripe } from '@/utils/stripe/config';
 
-
 function isValidEmail(email: string) {
   // Regular expression pattern for email validation
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -474,5 +473,3 @@ export async function updateName(formData: FormData) {
     'Your name has been updated.'
   );
 }
-
-
