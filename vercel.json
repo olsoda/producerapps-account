@@ -1,0 +1,42 @@
+{
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "/p/:subdomain/",
+      "has": [
+        {
+          "type": "host",
+          "value": "(?<subdomain>.*)\\.mixflip\\.me"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/p/:subdomain/$1",
+      "has": [
+        {
+          "type": "host",
+          "value": "(?<subdomain>.*)\\.mixflip\\.me"
+        }
+      ]
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/((?!p/).*)",
+      "destination": "https://mixflip.producerapps.com",
+      "permanent": true,
+      "has": [
+        {
+          "type": "host",
+          "value": "mixflip.me"
+        },
+        {
+          "type": "header",
+          "key": "Accept",
+          "value": "text/html.*"
+        }
+      ]
+    }
+  ]
+}
