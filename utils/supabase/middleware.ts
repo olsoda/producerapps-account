@@ -1,6 +1,8 @@
-//path to the file: utils/supabase/server.ts
+//path to the file: utils/supabase/middleware.ts
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { type NextRequest, NextResponse } from 'next/server';
+
+const SHARED_DOMAIN = '.producerapps.com';
 
 export const createClient = (request: NextRequest) => {
   // Create an unmodified response
@@ -10,8 +12,49 @@ export const createClient = (request: NextRequest) => {
     }
   });
 
-  const cookieDomain =
-    process.env.NODE_ENV === 'production' ? '.producerapps.com' : undefined;
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  const applyCookie = (
+    name: string,
+    value: string,
+    options: CookieOptions,
+    domain?: string
+  ) => {
+    const cookieOptions = domain ? { ...options, domain } : options;
+
+    // Keep request cookies in sync so Supabase can read the new value immediately
+    request.cookies.set({
+      name,
+      value,
+      ...cookieOptions
+    });
+
+    response = NextResponse.next({
+      request: {
+        headers: request.headers
+      }
+    });
+
+    response.cookies.set({
+      name,
+      value,
+      ...cookieOptions
+    });
+  };
+
+  const setCookieAcrossDomains = (
+    name: string,
+    value: string,
+    options: CookieOptions
+  ) => {
+    if (isProduction) {
+      // In production, set cookie with shared domain so it works across all subdomains
+      applyCookie(name, value, options, SHARED_DOMAIN);
+    } else {
+      // In development, use default domain (localhost)
+      applyCookie(name, value, options);
+    }
+  };
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -22,48 +65,11 @@ export const createClient = (request: NextRequest) => {
           return request.cookies.get(name)?.value;
         },
         set(name: string, value: string, options: CookieOptions) {
-          // If the cookie is updated, update the cookies for the request and response
-          request.cookies.set({
-            name,
-            value,
-            ...options,
-            domain: cookieDomain
-          });
-          response = NextResponse.next({
-            request: {
-              headers: request.headers
-            }
-          });
-          response.cookies.set({
-            name,
-            value,
-            ...options,
-            domain: cookieDomain
-          });
+          setCookieAcrossDomains(name, value, options);
         },
         remove(name: string, options: CookieOptions) {
-          // If the cookie is removed, update the cookies for the request and response
-          request.cookies.set({
-            name,
-            value: '',
-            ...options,
-            domain: cookieDomain
-          });
-          response = NextResponse.next({
-            request: {
-              headers: request.headers
-            }
-          });
-          response.cookies.set({
-            name,
-            value: '',
-            ...options,
-            domain: cookieDomain
-          });
+          setCookieAcrossDomains(name, '', options);
         }
-      },
-      cookieOptions: {
-        domain: cookieDomain
       }
     }
   );

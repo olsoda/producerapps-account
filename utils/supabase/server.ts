@@ -3,12 +3,31 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { Database } from '@/types_db';
 
+const SHARED_DOMAIN = '.producerapps.com';
+
 // Define a function to create a Supabase client for server-side operations
 // The function takes a cookie store created with next/headers cookies as an argument
 export const createClient = () => {
   const cookieStore = cookies();
-  const cookieDomain =
-    process.env.NODE_ENV === 'production' ? '.producerapps.com' : undefined;
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  const setCookieAcrossDomains = (
+    name: string,
+    value: string,
+    options: CookieOptions
+  ) => {
+    try {
+      if (isProduction) {
+        // In production, set cookie with shared domain so it works across all subdomains
+        cookieStore.set({ name, value, ...options, domain: SHARED_DOMAIN });
+      } else {
+        // In development, use default domain (localhost)
+        cookieStore.set({ name, value, ...options });
+      }
+    } catch {
+      // If invoked from a Server Component, setting cookies can throw; safe to ignore
+    }
+  };
 
   return createServerClient<Database>(
     // Pass Supabase URL and anonymous key from the environment to the client
@@ -24,30 +43,12 @@ export const createClient = () => {
         },
         // The set method is used to set a cookie with a given name, value, and options
         set(name: string, value: string, options: CookieOptions) {
-          try {
-            cookieStore.set({ name, value, ...options, domain: cookieDomain });
-          } catch (error) {
-            // If the set method is called from a Server Component, an error may occur
-            // This can be ignored if there is middleware refreshing user sessions
-          }
+          setCookieAcrossDomains(name, value, options);
         },
         // The remove method is used to delete a cookie by its name
         remove(name: string, options: CookieOptions) {
-          try {
-            cookieStore.set({
-              name,
-              value: '',
-              ...options,
-              domain: cookieDomain
-            });
-          } catch (error) {
-            // If the remove method is called from a Server Component, an error may occur
-            // This can be ignored if there is middleware refreshing user sessions
-          }
+          setCookieAcrossDomains(name, '', options);
         }
-      },
-      cookieOptions: {
-        domain: cookieDomain
       }
     }
   );
