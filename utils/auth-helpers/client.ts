@@ -18,8 +18,20 @@ export async function handleRequest(
   const formData = new FormData(e.currentTarget);
   const redirectUrl: string = await requestFunc(formData);
 
+  if (!redirectUrl) {
+    console.error('No redirect URL returned from server action');
+    return;
+  }
+
+  // If redirect URL contains query parameters, use full page navigation
+  // This ensures proper cookie handling and avoids navigation issues
+  if (redirectUrl.includes('?') || redirectUrl.includes('#')) {
+    window.location.href = redirectUrl;
+    return;
+  }
+
   if (router) {
-    // If client-side router is provided, use it to redirect
+    // If client-side router is provided, use it to redirect for simple paths
     return router.push(redirectUrl);
   } else {
     // Otherwise, redirect server-side

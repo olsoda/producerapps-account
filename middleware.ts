@@ -6,22 +6,23 @@ import { createClient } from '@/utils/supabase/middleware';
 export async function middleware(request: NextRequest) {
   const { supabase, response } = createClient(request);
 
+  // Safely get pathname - ensure it's defined
+  const pathname = request.nextUrl?.pathname || '';
+
   // Check auth state
   const {
     data: { user }
   } = await supabase.auth.getUser();
 
   // If there's no user and the path starts with /dashboard, redirect to /login
-  if (!user && request.nextUrl.pathname.startsWith('/dashboard')) {
+  if (!user && pathname.startsWith('/dashboard')) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
   // If there's a user and the path is /login or /, redirect to /dashboard
   if (
     user &&
-    (request.nextUrl.pathname === '/login' ||
-      request.nextUrl.pathname === '/' ||
-      request.nextUrl.pathname === '/signup')
+    (pathname === '/login' || pathname === '/' || pathname === '/signup')
   ) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
