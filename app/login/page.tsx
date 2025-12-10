@@ -2,11 +2,12 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import { createClient } from '@/utils/supabase/client';
+import { handleRequest } from '@/utils/auth-helpers/client';
+import { signInWithPassword } from '@/utils/auth-helpers/server';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { getStatusRedirect, getErrorRedirect } from '@/utils/helpers';
 import { Toaster } from '@/components/template_ui/TemplateToasts/toaster';
 import { Suspense } from 'react';
 import { Turnstile } from '@marsidev/react-turnstile';
@@ -49,8 +50,7 @@ export default function Login() {
     setIsSubmitting(false);
   };
 
-  const handleSignIn = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSignIn = async (e: FormEvent<HTMLFormElement>) => {
     setIsSubmitting(true);
 
     if (!turnstileToken) {
@@ -64,24 +64,7 @@ export default function Login() {
     }
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-        options: {
-          captchaToken: turnstileToken
-        }
-      });
-
-      if (error) {
-        console.error('Error signing in:', error.message);
-        // Redirect to the login page with an error message
-        router.push(
-          getErrorRedirect('/login', 'Sign in failed', error.message)
-        );
-      } else {
-        // Redirect to the dashboard with a success message
-        router.push(getStatusRedirect('/dashboard', 'Sign in successful'));
-      }
+      await handleRequest(e, signInWithPassword, router);
     } catch (error) {
       console.error('Unexpected error during sign in:', error);
       toast({
@@ -152,6 +135,7 @@ export default function Login() {
                 <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
+                  name="email"
                   type="email"
                   placeholder="you@example.com"
                   value={email}
@@ -163,6 +147,7 @@ export default function Login() {
                 <Label htmlFor="password">Password</Label>
                 <Input
                   id="password"
+                  name="password"
                   type="password"
                   placeholder=""
                   value={password}
@@ -178,6 +163,11 @@ export default function Login() {
                   </Link>
                 </div>
               </div>
+              <input
+                type="hidden"
+                name="turnstileToken"
+                value={turnstileToken}
+              />
               <Turnstile
                 siteKey={process.env.NEXT_PUBLIC_CLOUDFLARE_TURNSTILE_SITE_KEY!}
                 onSuccess={(token) => setTurnstileToken(token)}

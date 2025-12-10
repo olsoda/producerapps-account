@@ -150,26 +150,31 @@ export async function signInWithPassword(formData: FormData) {
   const cookieStore = cookies();
   const email = String(formData.get('email')).trim();
   const password = String(formData.get('password')).trim();
+  const captchaToken = String(formData.get('turnstileToken') || '').trim();
   let redirectPath: string;
 
   const supabase = createClient();
   const { error, data } = await supabase.auth.signInWithPassword({
     email,
-    password
+    password,
+    options: {
+      // Pass along Cloudflare Turnstile token when present
+      captchaToken: captchaToken || undefined
+    }
   });
 
   if (error) {
-    redirectPath = getErrorRedirect(
-      '/signin',
-      'Sign in failed.',
-      error.message
-    );
+    redirectPath = getErrorRedirect('/login', 'Sign in failed.', error.message);
   } else if (data.user) {
     cookieStore.set('preferredSignInView', 'password_signin', { path: '/' });
-    redirectPath = getStatusRedirect('/', 'Success!', 'You are now signed in.');
+    redirectPath = getStatusRedirect(
+      '/dashboard',
+      'Success!',
+      'You are now signed in.'
+    );
   } else {
     redirectPath = getErrorRedirect(
-      '/signin',
+      '/login',
       'Hmm... Something went wrong.',
       'You could not be signed in.'
     );
